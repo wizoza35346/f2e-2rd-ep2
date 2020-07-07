@@ -63,7 +63,7 @@ function Game() {
   });
 
   const bind = useDrag(({ down, args: [fromIndex], xy: [x, y], offset: [ox, oy], movement: [mx, my] }) => {
-    set(index => index === fromIndex && { x, y });
+    set(index => index === fromIndex && { x: mx, y: my });
   });
 
   return (

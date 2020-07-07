@@ -31,15 +31,28 @@ module.exports = {
       },
       {
         // https://dwatow.github.io/2018/12-29-webpack/action-url-loader-file-loader/
-        test: /\.(png|svg|jpg|gif|ttf)$/,
+        test: /\.(png|svg|jpg|gif)$/,
         use: {
           loader: 'url-loader',
           options: {
             esModule: false,
-            // 1KB
-            limit: 1024, //bytes
-            name: `[name]${IS_HASH}`,
+            // 5KB
+            limit: 5120, //bytes
+            name: `[name].[ext]`,
             outputPath: 'static/image/',
+          },
+        },
+      },
+      {
+        test: /\.(ttf)$/,
+        use: {
+          loader: 'url-loader',
+          options: {
+            esModule: false,
+            // 5KB
+            limit: 5120, //bytes
+            name: `[name].[ext]`,
+            outputPath: 'static/font/',
           },
         },
       },
