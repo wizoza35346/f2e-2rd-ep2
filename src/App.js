@@ -1,5 +1,5 @@
 import React from 'react';
-import Game from './components/Game';
+import Game from './components/Game1';
 import { hot } from 'react-hot-loader/root';
 
 import { createGlobalStyle } from 'styled-components';
