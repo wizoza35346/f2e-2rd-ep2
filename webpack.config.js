@@ -5,14 +5,14 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
 const DEV_MODE = process.env.NODE_ENV !== 'production';
-const IS_HASH = DEV_MODE ? '' : '.[contenthash]';
+const HASH = DEV_MODE ? '' : '.[contenthash]';
 const STYLE_LOADER = DEV_MODE ? 'style-loader' : MiniCssExtractPlugin.loader;
 
 module.exports = {
   entry: ['react-hot-loader/patch', './src/index.js'],
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: `static/js/[name]${IS_HASH}.js`,
+    filename: `static/js/[name]${HASH}.js`,
   },
   module: {
     rules: [
@@ -69,8 +69,8 @@ module.exports = {
       template: './public/index.html',
     }),
     new MiniCssExtractPlugin({
-      filename: `static/css/[name]${IS_HASH}.css`,
-      chunkFilename: `static/css/[id]${IS_HASH}.css`,
+      filename: `static/css/[name]${HASH}.css`,
+      chunkFilename: `static/css/[id]${HASH}.css`,
     }),
   ],
   optimization: {

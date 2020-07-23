@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { debounce, throttle } from '../utils/';
 
 import { useSprings, animated, interpolate, useSpring } from 'react-spring';
 import { useDrag, useScroll, useGesture } from 'react-use-gesture';
@@ -7,6 +8,7 @@ import styled from 'styled-components';
 const Container = styled.div`
   margin: 3rem auto;
   width: 975px;
+  user-select: none;
 `;
 
 const FreeCardZone = styled.div`
@@ -21,6 +23,7 @@ const FreeCardZone = styled.div`
   color: #545b61;
   font-weight: 700;
   position: relative;
+  user-select: none;
 
   &::before {
     content: '';
@@ -38,6 +41,7 @@ const CardZone = styled.div`
   display: flex;
   justify-content: space-between;
   margin-bottom: 1.5rem;
+  user-select: none;
 `;
 const Card = styled(animated.div)`
   position: absolute;
@@ -51,19 +55,60 @@ function importAll(r) {
 }
 
 const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
-const nums = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const nums = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const from = _ => ({ x: 400, y: 500 });
 const to = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 50 });
 
 const images = importAll(require.context('../assets/cards/', false, /\.(png)$/));
 
+function getRandom(start, end, length, repeat = false) {
+  const generateRandom = () => Math.floor(Math.random() * end) + start;
+
+  if (repeat) return Array(length).join().split(',').map(generateRandom);
+  else {
+    let randoms = [];
+    for (let i = start; i <= end; i++) {
+      (function j() {
+        const newRandom = generateRandom();
+        if (randoms.indexOf(newRandom) === -1) randoms = [...randoms, newRandom];
+        else j();
+      })();
+    }
+
+    return randoms;
+  }
+}
+
 function Game() {
+  const lastPosition = useRef([0, 0]);
+  const [cards, setCards] = useState(() => {
+    const random = getRandom(1, 52, 52);
+    return suits
+      .reduce((all, next) => [...all, ...nums.map(n => `${n}_${next}.png`)], [])
+      .map((c, i) => ({
+        cardName: c,
+        key: random[i],
+      }));
+  });
+  console.log(cards);
   const [props, set, stop] = useSprings(Object.keys(images).length, (i, ...other) => {
     return { ...to(i), from: from(i) };
   });
 
-  const bind = useDrag(({ down, args: [fromIndex], xy: [x, y], offset: [ox, oy], movement: [mx, my] }) => {
-    set(index => index === fromIndex && { x: mx, y: my });
+  const bind = useDrag(({ down, args: [fromIndex], xy: [x, y], offset: [ox, oy], movement: [mx, my], event }) => {
+    const card = event?.target ?? undefined;
+
+    let [lox, loy] = lastPosition.current;
+    if (lox === 0 && loy === 0) {
+      lox = x - card?.getBoundingClientRect().left;
+      loy = y - card?.getBoundingClientRect().top;
+
+      lastPosition.current = [lox, loy];
+    }
+
+    if (!down) lastPosition.current = [0, 0];
+
+    set(index => index === fromIndex && { x: x - lox - 113, y: y - loy - 230 });
   });
 
   return (
@@ -80,7 +125,15 @@ function Game() {
       </CardZone>
       <CardZone>
         {props.map(({ x, y }, i) => (
-          <Card key={i} {...bind(i)} style={{ top: y, left: x, backgroundImage: `url(${images[`A_Spades.png`]})` }} />
+          <Card
+            key={i}
+            {...bind(i)}
+            style={{
+              top: y,
+              left: x,
+              backgroundImage: `url(${images[cards.find(c => c.key == i + 1)?.cardName]})`,
+            }}
+          />
         ))}
       </CardZone>
     </Container>
