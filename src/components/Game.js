@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { debounce, throttle } from '../utils/';
 
-import { useSprings, animated, interpolate, useSpring } from 'react-spring';
+import { useSprings, animated, interpolate, useSpring, config } from 'react-spring';
 import { useDrag, useScroll, useGesture } from 'react-use-gesture';
 import styled from 'styled-components';
+import useWindowSize from '../hooks/useWindowSize';
 
 const Container = styled.div`
   margin: 3rem auto;
@@ -61,28 +62,42 @@ const to = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 50 })
 
 const images = importAll(require.context('../assets/cards/', false, /\.(png)$/));
 
-function getRandom(start, end, length, repeat = false) {
-  const generateRandom = () => Math.floor(Math.random() * end) + start;
+function generateSetOfRandom(start, end, length, repeat = false) {
+  const _newRandom = () => Math.floor(Math.random() * end) + start;
+  const _setOfRandom = func => Array(length).join().split(',').map(func);
 
-  if (repeat) return Array(length).join().split(',').map(generateRandom);
+  if (repeat) return _setOfRandom(_newRandom);
   else {
     let randoms = [];
-    for (let i = start; i <= end; i++) {
+    return _setOfRandom(_ => {
+      let newRandom;
       (function j() {
-        const newRandom = generateRandom();
+        newRandom = _newRandom();
         if (randoms.indexOf(newRandom) === -1) randoms = [...randoms, newRandom];
         else j();
       })();
-    }
-
-    return randoms;
+      return newRandom;
+    });
   }
 }
 
 function Game() {
+  const { width, height } = useWindowSize();
+  const cardZoneRef = useRef(null);
+  const cardZoneOffsetRef = useRef({
+    offsetTop: cardZoneRef.current?.offsetTop,
+    offsetLeft: cardZoneRef.current?.offsetLeft,
+  });
+
+  useEffect(() => {
+    cardZoneOffsetRef.current = {
+      offsetTop: cardZoneRef.current?.offsetTop,
+      offsetLeft: cardZoneRef.current?.offsetLeft,
+    };
+  }, [width, height]);
   const lastPosition = useRef([0, 0]);
   const [cards, setCards] = useState(() => {
-    const random = getRandom(1, 52, 52);
+    const random = generateSetOfRandom(1, 52, 52);
     return suits
       .reduce((all, next) => [...all, ...nums.map(n => `${n}_${next}.png`)], [])
       .map((c, i) => ({
@@ -92,7 +107,7 @@ function Game() {
   });
   console.log(cards);
   const [props, set, stop] = useSprings(Object.keys(images).length, (i, ...other) => {
-    return { ...to(i), from: from(i) };
+    return { ...to(i), from: from(i), config: { ...config.wobbly, clamp: true, delay: 0 } };
   });
 
   const bind = useDrag(({ down, args: [fromIndex], xy: [x, y], offset: [ox, oy], movement: [mx, my], event }) => {
@@ -108,7 +123,13 @@ function Game() {
 
     if (!down) lastPosition.current = [0, 0];
 
-    set(index => index === fromIndex && { x: x - lox - 113, y: y - loy - 230 });
+    set(
+      index =>
+        index === fromIndex && {
+          x: x - lox - cardZoneOffsetRef.current?.offsetLeft,
+          y: y - loy - cardZoneOffsetRef.current?.offsetTop,
+        }
+    );
   });
 
   return (
@@ -123,12 +144,13 @@ function Game() {
         <FreeCardZone>A</FreeCardZone>
         <FreeCardZone>A</FreeCardZone>
       </CardZone>
-      <CardZone>
+      <CardZone ref={cardZoneRef}>
         {props.map(({ x, y }, i) => (
           <Card
             key={i}
             {...bind(i)}
             style={{
+              // transform: interpolate([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`),
               top: y,
               left: x,
               backgroundImage: `url(${images[cards.find(c => c.key == i + 1)?.cardName]})`,
