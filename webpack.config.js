@@ -9,7 +9,7 @@ const HASH = DEV_MODE ? '' : '.[contenthash]';
 const STYLE_LOADER = DEV_MODE ? 'style-loader' : MiniCssExtractPlugin.loader;
 
 module.exports = {
-  entry: ['react-hot-loader/patch', './src/index.js'],
+  entry: ['react-hot-loader/patch', './src/main.js'],
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: `static/js/[name]${HASH}.js`,

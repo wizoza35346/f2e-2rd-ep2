@@ -1,3 +1,26 @@
+export function importAll(r) {
+  return r.keys().reduce((res, item) => ({ ...res, [item.replace('./', '')]: r(item) }), {});
+}
+
+export function generateSetOfRandoms(start, end, length, repeat = false) {
+  const _newRandom = () => Math.floor(Math.random() * end) + start;
+  const _setOfRandom = func => Array(length).join().split(',').map(func);
+
+  if (repeat) return _setOfRandom(_newRandom);
+  else {
+    let randoms = [];
+    return _setOfRandom(_ => {
+      let newRandom;
+      (function j() {
+        newRandom = _newRandom();
+        if (randoms.indexOf(newRandom) === -1) randoms = [...randoms, newRandom];
+        else j();
+      })();
+      return newRandom;
+    });
+  }
+}
+
 export function debounce(func, delay = 250) {
   let p = null;
 
