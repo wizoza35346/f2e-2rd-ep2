@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useSprings, animated, interpolate, useSpring, config } from 'react-spring';
+import { useSprings, animated, to, useSpring, config } from 'react-spring';
 import { useDrag, useScroll, useGesture } from 'react-use-gesture';
 
 import { suitType, nums, isCardMatch, cardset, images, newGame, initto, initfrom, getCardPosition } from './func';
@@ -38,7 +38,7 @@ function Game() {
   const isSuitValidBeforeDrag = useCallback(
     (group, seq) => {
       const groupset = cards.cardset[group];
-      // * 最底一張可移動
+      // * 最底一張可直接移動
       if (seq === groupset.length) return true;
       // * 花色match 才可移動
       for (let i = seq; i < groupset.length; i++) {
@@ -77,34 +77,38 @@ function Game() {
           }
       );
     },
-    onDrag: ({ down, args: [{ group, seq, springId }], xy: [x, y], event }) => {
+    onDrag: ({ down, args: [{ group, seq, springId }], xy: [x, y], event, delta: [deltaX] }) => {
       const [lox, loy] = dragOffset.current;
       if (lox === 0 && loy === 0) return;
-
-      // TODO when hover && matched => hightlight
-      // const card = event?.target ?? undefined;
-      // card.hidden = true;
-      // const el = document.elementFromPoint(x, y);
-      // card.hidden = false;
-      // const hoverCard = el.closest('.card');
-      // // console.log(x, y, hoverCard);
-      // if (hoverCard && hoverCard !== card) {
-      //   console.log(hoverCard);
-      // }
 
       const groupset = cards.cardset[group];
       const controlCards = groupset.filter(g => g.seq >= seq);
 
-      set(index => {
-        const matchedCard = controlCards.find(c => c.springId === index);
+      const fixedX = x - lox - cardZoneOffsetRef.current?.offsetLeft;
+      const fixedY = y - loy - cardZoneOffsetRef.current?.offsetTop;
 
-        return (
-          matchedCard && {
-            x: x - lox - cardZoneOffsetRef.current?.offsetLeft,
-            y: y - loy - cardZoneOffsetRef.current?.offsetTop + (matchedCard.seq - seq) * 30,
+      const hoverGroup = (posX => {
+        const computeX = deltaX > 0 ? posX + 100 : posX;
+        if (computeX <= 112.5) return 1;
+        const _group = Math.ceil((computeX - 112.5) / 125) + 1;
+        return _group > 8 ? 8 : _group;
+      })(fixedX);
+
+      const [hoverCard] = cards.cardset[hoverGroup - 1].slice(-1);
+
+      set(index => {
+        const matchedMoveCard = controlCards.find(c => c.springId === index);
+        const matchedHoverCard = hoverCard.springId === index;
+
+        if (matchedMoveCard)
+          return {
+            x: fixedX,
+            y: fixedY + (matchedMoveCard.seq - seq) * 30,
             immediate: down,
-          }
-        );
+          };
+
+        if (matchedHoverCard && isCardMatch(hoverCard, controlCards[0])) return { matchedMove: true };
+        return { matchedMove: false };
       });
     },
     onDragEnd: ({ down, args: [{ group, seq, springId }], xy: [x, y], event }) => {
@@ -121,8 +125,10 @@ function Game() {
 
           if (matchedCard) {
             const { x: posX, y: posY } = getCardPosition(matchedCard);
-            return { shadow: false, x: posX, y: posY, delay: 20 * (matchedCard.seq - seq) };
+            return { shadow: false, x: posX, y: posY, delay: 30 * (matchedCard.seq - seq) };
           }
+
+          return { matchedMove: false };
         });
       }
     },
@@ -142,18 +148,23 @@ function Game() {
       </CardZone>
       <CardZone ref={cardZoneRef}>
         {console.log(cards)}
-        {props.map(({ x, y, shadow }, i) => {
+        {props.map(({ x, y, shadow, matchedMove }, i) => {
           const card = cardsFlat.find(c => c.springId == i);
-
+          // console.log(matchedMove && card);
           return (
             <Card
               className="card"
               key={i}
               {...bind(card)}
+              onDoubleClick={e => {
+                e.persist();
+                console.log(e);
+              }}
               style={{
-                transform: interpolate([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`),
+                transform: to([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`),
                 backgroundImage: `url(${images[card?.cardname]})`,
-                filter: interpolate([shadow], s => (s ? `drop-shadow(8px 8px 10px #000)` : '')),
+                filter: to([shadow], s => (s ? `drop-shadow(8px 8px 10px #000)` : '')),
+                border: to([matchedMove], m => (m ? `1px solid red` : '')), //matchedMove ? `1px solid red` : '', //
               }}
             />
           );

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { animated } from 'react-spring';
 import styled, { createGlobalStyle } from 'styled-components';
 

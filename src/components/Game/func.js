@@ -1,8 +1,8 @@
 import { importAll, generateSetOfRandoms } from '../../utils';
+export const images = importAll(require.context('../../assets/cards/', false, /\.(png)$/));
 export const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
-
-export const suitType = suit => (suit.match(/(Hearts|Diamonds)/) === null ? 'black' : 'red');
 export const nums = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+export const suitType = suit => (suit.match(/(Hearts|Diamonds)/) === null ? 'black' : 'red');
 export const isCardMatch = ({ suit: suitA, number: numA }, { suit: suitB, number: numB }) => {
   // * 判斷花色
   if (suitType(suitA) === suitType(suitB)) return false;
@@ -11,12 +11,10 @@ export const isCardMatch = ({ suit: suitA, number: numA }, { suit: suitB, number
 
   return true;
 };
-
 export const cardset = suits.reduce(
   (card, next) => [...card, ...nums.map(n => ({ cardname: `${n}_${next}.png`, number: n, suit: next }))],
   []
 );
-export const images = importAll(require.context('../../assets/cards/', false, /\.(png)$/));
 export const newGame = () => {
   const random = generateSetOfRandoms(1, 52, 52);
   return random.reduce(
@@ -38,8 +36,8 @@ export const newGame = () => {
   );
 };
 
-export const initfrom = _ => ({ x: 400, y: 500, shadow: false });
-export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 0 });
+export const initfrom = _ => ({ x: 400, y: 500, shadow: false, matchedMove: false });
+export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 30 });
 
 export const getCardPosition = ({ group, seq }) => ({
   x: group * 125,
