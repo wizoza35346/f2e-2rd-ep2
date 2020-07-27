@@ -29,10 +29,10 @@ function Game() {
   //* 卡片設定區
   const dragOffset = useRef([0, 0]);
   const [cards, setCards] = useState(newGame);
-  const cardsFlat = useMemo(() => cards.cardset.flat(), [cards.cardset]);
+  const cardsFlat = useMemo(() => cards.cardset.flat(), [cards]);
   const maxDragLength = useMemo(() => {
     const cell = 4 - cards.cells.length;
-    const group = cards.cardset.filter(g => g.length === 0).length;
+    const group = cards.cardset.filter(g => g?.length === 0).length;
     return cell + group + 1;
   }, [cards]);
   const isSuitValidBeforeDrag = useCallback(
@@ -56,7 +56,15 @@ function Game() {
     // TODO Fixed Position
     // set(index => {})
     console.log('Card changes,new card = ', cards);
-  }, [cards]);
+    setCardsProps(index => {
+      const card = cardsFlat.find(c => c.springId === index);
+
+      if (card) {
+        const { x: posX, y: posY } = getCardPosition(card);
+        return { shadow: false, x: posX, y: posY, zIndex: '10' };
+      }
+    });
+  }, [cardsFlat]);
 
   // * 設定動畫
   const [cardsProps, setCardsProps] = useSprings(cardsFlat.length, i => ({ ...initto(i), from: initfrom(i) }));
@@ -242,24 +250,22 @@ function Game() {
             },
           };
 
-        return { toGroup: result.groupId, spring: { display: 'none' } };
+        return { toGroup: undefined, spring: { display: 'none' } };
       })(fixedX, fixedY);
 
       if (matchedPosition.toGroup) {
         console.log(matchedPosition);
-        try {
-          setCards(prevState => ({
-            ...prevState,
-            cardset: [
-              ...prevState.cardset.map((g, gi) => {
-                if (gi + 1 === group) return g.slice(0, groupset.length - controlCards.length);
-                else if (gi + 1 == matchedPosition.toGroup) return [...g, ...controlCards];
-              }),
-            ],
-          }));
-        } catch {
-          console.log(cards.cardset, controlCards);
-        }
+        setCards(prevState => ({
+          ...prevState,
+          cardset: [
+            ...prevState.cardset.map((g, gi) => {
+              if (gi === group) return g.slice(0, groupset.length - controlCards.length);
+              else if (gi == matchedPosition.toGroup)
+                return [...g, ...controlCards.map((c, ci) => ({ ...c, group: gi, seq: g.length + ci + 1 }))];
+              return g;
+            }),
+          ],
+        }));
       } else {
         const groupset = cards.cardset[group];
         const controlCards = groupset.filter(g => g.seq >= seq);
@@ -267,6 +273,7 @@ function Game() {
           const matchedCard = controlCards.find(c => c.springId === index);
 
           if (matchedCard) {
+            console.log(matchedCard);
             const { x: posX, y: posY } = getCardPosition(matchedCard);
             return { shadow: false, x: posX, y: posY, delay: 30 * (matchedCard.seq - seq), zIndex: '10' };
           }
@@ -293,7 +300,7 @@ function Game() {
       </CardZone>
       <CardZone ref={cardZoneRef}>
         {hintProps.map(({ x, y, display }, i) => {
-          return <HintArea style={{ display, top: y, left: x }} />;
+          return <HintArea key={i} style={{ display, top: y, left: x }} />;
         })}
 
         {cardsProps.map(({ x, y, shadow, zIndex }, i) => {
@@ -305,7 +312,7 @@ function Game() {
               {...bind(card)}
               onDoubleClick={e => handleHintCard(card)}
               style={{
-                zIndex: to([zIndex], s => s),
+                zIndex: to([zIndex], s => s * card.seq),
                 transform: to([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`),
                 backgroundImage: `url(${images[card?.cardname]})`,
                 filter: to([shadow], s => (s ? `drop-shadow(8px 8px 10px #000)` : '')),
