@@ -57,3 +57,13 @@ export const Card = styled(animated.div)`
   height: 154px;
   background-size: cover;
 `;
+export const HintArea = styled(animated.div)`
+  position: absolute;
+  width: 100px;
+  height: 154px;
+  z-index: 999;
+  box-shadow: 0 0 25px #ffac4e;
+  border: 1px solid #ffac4e;
+  border-radius: 10px;
+  box-sizing: border-box;
+`;

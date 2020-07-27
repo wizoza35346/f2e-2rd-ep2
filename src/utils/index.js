@@ -1,24 +1,23 @@
 export function importAll(r) {
   return r.keys().reduce((res, item) => ({ ...res, [item.replace('./', '')]: r(item) }), {});
 }
+export const enums = (n, startWith = 1) =>
+  Array(n)
+    .join('_')
+    .split('_')
+    .map((_, i) => i + startWith);
 
-export function generateSetOfRandoms(start, end, length, repeat = false) {
-  const _newRandom = () => Math.floor(Math.random() * end) + start;
-  const _setOfRandom = func => Array(length).join().split(',').map(func);
+// Fisher–Yates Shuffle洗牌演算法
+// Ref: https://www.jianshu.com/p/7cb95ad7d5d5
+export function shuffle(array) {
+  let m = array.length;
 
-  if (repeat) return _setOfRandom(_newRandom);
-  else {
-    let randoms = [];
-    return _setOfRandom(_ => {
-      let newRandom;
-      (function j() {
-        newRandom = _newRandom();
-        if (randoms.indexOf(newRandom) === -1) randoms = [...randoms, newRandom];
-        else j();
-      })();
-      return newRandom;
-    });
+  while (m) {
+    const i = Math.floor(Math.random() * m--);
+    [array[i], array[m]] = [array[m], array[i]];
   }
+
+  return array;
 }
 
 export function debounce(func, delay = 250) {

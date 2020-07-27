@@ -3,7 +3,7 @@ import { useSprings, animated, to, useSpring, config } from 'react-spring';
 import { useDrag, useScroll, useGesture } from 'react-use-gesture';
 
 import { suitType, nums, isCardMatch, cardset, images, newGame, initto, initfrom, getCardPosition } from './func';
-import { FreeCardZone, CardZone, Card } from '../Styled';
+import { FreeCardZone, CardZone, Card, HintArea } from '../Styled';
 import { useResize } from '../../hooks/useResize';
 
 function Game() {
@@ -49,14 +49,18 @@ function Game() {
     },
     [cards]
   );
+  const handleHintCard = card => {
+    console.log(card);
+  };
   useEffect(() => {
     // TODO Fixed Position
     // set(index => {})
-    console.log('Card changes');
+    console.log('Card changes,new card = ', cards);
   }, [cards]);
 
   // * 設定動畫
-  const [props, set, stop] = useSprings(cardsFlat.length, i => ({ ...initto(i), from: initfrom(i) }));
+  const [cardsProps, setCardsProps] = useSprings(cardsFlat.length, i => ({ ...initto(i), from: initfrom(i) }));
+  const [hintProps, setHintProps] = useSprings(2, i => ({ display: 'none', x: 0, y: 0 }));
 
   // * 綁定手勢操作
   const bind = useGesture({
@@ -70,7 +74,7 @@ function Game() {
       const loy = y - card?.getBoundingClientRect().top;
       dragOffset.current = [lox, loy];
 
-      set(
+      setCardsProps(
         index =>
           index === springId && {
             shadow: true,
@@ -87,50 +91,191 @@ function Game() {
       const fixedX = x - lox - cardZoneOffsetRef.current?.offsetLeft;
       const fixedY = y - loy - cardZoneOffsetRef.current?.offsetTop;
 
-      const hoverGroup = (posX => {
-        const computeX = deltaX > 0 ? posX + 100 : posX;
-        if (computeX <= 112.5) return 1;
-        const _group = Math.ceil((computeX - 112.5) / 125) + 1;
-        return _group > 8 ? 8 : _group;
-      })(fixedX);
+      const matchedPosition = ((posX, posY) => {
+        // TODO 固定的參數 改成RWD時要改
+        let groupX = 0;
+        let groupId = 0;
+        let groupRange = 0;
+        let totalMatchedGroup = [];
+        const cardRange = [posX, posX + 100];
+        do {
+          if (groupId === 0 || groupId === 7) groupRange = groupX + 112.5;
+          else groupRange = groupX + 125;
 
-      const [hoverCard] = cards.cardset[hoverGroup - 1].slice(-1);
+          cardRange.forEach(pos => {
+            if (groupX <= pos && pos <= groupRange) {
+              totalMatchedGroup = [
+                ...totalMatchedGroup,
+                {
+                  groupId,
+                  left: Math.min(cardRange[0], groupX),
+                  right: Math.max(cardRange[1], groupRange),
+                },
+              ];
+            }
+          });
 
-      set(index => {
+          groupId += 1;
+          groupX = groupRange;
+        } while (groupX < 975);
+        // console.log(totalMatchedGroup);
+
+        const [result] = totalMatchedGroup.sort((m, m1) => m.right - m.left - (m1.right - m1.left));
+        const [hoverCard] = cards.cardset[result.groupId].slice(-1);
+        if (isCardMatch(hoverCard, controlCards[0]))
+          return {
+            x: result.groupId * 125,
+            y: (cards.cardset[result.groupId].length - 1) * 30,
+            display: 'block',
+            immediate: true,
+          };
+
+        return { display: 'none' };
+      })(fixedX, fixedY);
+
+      setCardsProps(index => {
         const matchedMoveCard = controlCards.find(c => c.springId === index);
-        const matchedHoverCard = hoverCard.springId === index;
+
+        const matchedPosition = ((posX, posY) => {
+          // TODO 固定的參數 改成RWD時要改
+          let groupX = 0;
+          let groupId = 0;
+          let groupRange = 0;
+          let totalMatchedGroup = [];
+          const cardRange = [posX, posX + 100];
+          do {
+            if (groupId === 0 || groupId === 7) groupRange = groupX + 112.5;
+            else groupRange = groupX + 125;
+
+            cardRange.forEach(pos => {
+              if (groupX <= pos && pos <= groupRange) {
+                totalMatchedGroup = [
+                  ...totalMatchedGroup,
+                  {
+                    groupId,
+                    left: Math.min(cardRange[0], groupX),
+                    right: Math.max(cardRange[1], groupRange),
+                  },
+                ];
+              }
+            });
+
+            groupId += 1;
+            groupX = groupRange;
+          } while (groupX < 975);
+          // console.log(totalMatchedGroup);
+
+          const [result] = totalMatchedGroup.sort((m, m1) => m.right - m.left - (m1.right - m1.left));
+          const [hoverCard] = cards.cardset[result.groupId].slice(-1);
+          if (isCardMatch(hoverCard, controlCards[0]))
+            return {
+              x: result.groupId * 125,
+              y: (cards.cardset[result.groupId].length - 1) * 30,
+              display: 'block',
+              immediate: true,
+            };
+
+          return { display: 'none' };
+        })(fixedX, fixedY);
 
         if (matchedMoveCard)
           return {
             x: fixedX,
             y: fixedY + (matchedMoveCard.seq - seq) * 30,
+            zIndex: '1200',
             immediate: down,
           };
-
-        if (matchedHoverCard && isCardMatch(hoverCard, controlCards[0])) return { matchedMove: true };
-        return { matchedMove: false };
+        // else return { zIndex: '10' };
+      });
+      setHintProps(index => {
+        return index === 0 && matchedPosition;
       });
     },
     onDragEnd: ({ down, args: [{ group, seq, springId }], xy: [x, y], event }) => {
-      dragOffset.current = [0, 0];
+      const [lox, loy] = dragOffset.current;
+      if (lox === 0 && loy === 0) return;
 
-      if (false) {
-        // TODO  move matched
-        // setCards();
+      const groupset = cards.cardset[group];
+      const controlCards = groupset.filter(g => g.seq >= seq);
+
+      const fixedX = x - lox - cardZoneOffsetRef.current?.offsetLeft;
+      const fixedY = y - loy - cardZoneOffsetRef.current?.offsetTop;
+
+      const matchedPosition = ((posX, posY) => {
+        // TODO 固定的參數 改成RWD時要改
+        let groupX = 0;
+        let groupId = 0;
+        let groupRange = 0;
+        let totalMatchedGroup = [];
+        const cardRange = [posX, posX + 100];
+        do {
+          if (groupId === 0 || groupId === 7) groupRange = groupX + 112.5;
+          else groupRange = groupX + 125;
+
+          cardRange.forEach(pos => {
+            if (groupX <= pos && pos <= groupRange) {
+              totalMatchedGroup = [
+                ...totalMatchedGroup,
+                {
+                  groupId,
+                  left: Math.min(cardRange[0], groupX),
+                  right: Math.max(cardRange[1], groupRange),
+                },
+              ];
+            }
+          });
+
+          groupId += 1;
+          groupX = groupRange;
+        } while (groupX < 975);
+
+        const [result] = totalMatchedGroup.sort((m, m1) => m.right - m.left - (m1.right - m1.left));
+        const [hoverCard] = cards.cardset[result.groupId].slice(-1);
+        if (isCardMatch(hoverCard, controlCards[0]))
+          return {
+            toGroup: result.groupId,
+            spring: {
+              x: result.groupId * 125,
+              y: (cards.cardset[result.groupId].length - 1) * 30,
+              display: 'block',
+              immediate: true,
+            },
+          };
+
+        return { toGroup: result.groupId, spring: { display: 'none' } };
+      })(fixedX, fixedY);
+
+      if (matchedPosition.toGroup) {
+        console.log(matchedPosition);
+        try {
+          setCards(prevState => ({
+            ...prevState,
+            cardset: [
+              ...prevState.cardset.map((g, gi) => {
+                if (gi + 1 === group) return g.slice(0, groupset.length - controlCards.length);
+                else if (gi + 1 == matchedPosition.toGroup) return [...g, ...controlCards];
+              }),
+            ],
+          }));
+        } catch {
+          console.log(cards.cardset, controlCards);
+        }
       } else {
         const groupset = cards.cardset[group];
         const controlCards = groupset.filter(g => g.seq >= seq);
-        set(index => {
+        setCardsProps(index => {
           const matchedCard = controlCards.find(c => c.springId === index);
 
           if (matchedCard) {
             const { x: posX, y: posY } = getCardPosition(matchedCard);
-            return { shadow: false, x: posX, y: posY, delay: 30 * (matchedCard.seq - seq) };
+            return { shadow: false, x: posX, y: posY, delay: 30 * (matchedCard.seq - seq), zIndex: '10' };
           }
-
-          return { matchedMove: false };
         });
       }
+      setHintProps(_ => ({
+        display: 'none',
+      }));
+      dragOffset.current = [0, 0];
     },
   });
 
@@ -147,24 +292,23 @@ function Game() {
         <FreeCardZone>A</FreeCardZone>
       </CardZone>
       <CardZone ref={cardZoneRef}>
-        {console.log(cards)}
-        {props.map(({ x, y, shadow, matchedMove }, i) => {
+        {hintProps.map(({ x, y, display }, i) => {
+          return <HintArea style={{ display, top: y, left: x }} />;
+        })}
+
+        {cardsProps.map(({ x, y, shadow, zIndex }, i) => {
           const card = cardsFlat.find(c => c.springId == i);
-          // console.log(matchedMove && card);
           return (
             <Card
               className="card"
               key={i}
               {...bind(card)}
-              onDoubleClick={e => {
-                e.persist();
-                console.log(e);
-              }}
+              onDoubleClick={e => handleHintCard(card)}
               style={{
+                zIndex: to([zIndex], s => s),
                 transform: to([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`),
                 backgroundImage: `url(${images[card?.cardname]})`,
                 filter: to([shadow], s => (s ? `drop-shadow(8px 8px 10px #000)` : '')),
-                border: to([matchedMove], m => (m ? `1px solid red` : '')), //matchedMove ? `1px solid red` : '', //
               }}
             />
           );

@@ -1,4 +1,4 @@
-import { importAll, generateSetOfRandoms } from '../../utils';
+import { importAll, enums, shuffle } from '../../utils';
 export const images = importAll(require.context('../../assets/cards/', false, /\.(png)$/));
 export const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
 export const nums = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -16,7 +16,7 @@ export const cardset = suits.reduce(
   []
 );
 export const newGame = () => {
-  const random = generateSetOfRandoms(1, 52, 52);
+  const random = shuffle(enums(52));
   return random.reduce(
     (cards, next, idx) => {
       cards.cardset = [
@@ -36,7 +36,7 @@ export const newGame = () => {
   );
 };
 
-export const initfrom = _ => ({ x: 400, y: 500, shadow: false, matchedMove: false });
+export const initfrom = _ => ({ x: 400, y: 500, shadow: false, zIndex: '10' });
 export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 30 });
 
 export const getCardPosition = ({ group, seq }) => ({
