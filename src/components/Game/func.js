@@ -16,14 +16,13 @@ export const cardset = suits.reduce(
   []
 );
 export const newGame = () => {
-  const random = shuffle(enums(52));
+  const random = shuffle(enums(52, 0));
   return random.reduce(
-    (cards, next, idx) => {
+    (cards, next, ri) => {
       cards.cardset = [
-        ...cards.cardset.map((set, i) =>
-          idx % 8 !== i
-            ? set
-            : [...set, { ...cardset[next - 1], cardId: next, springId: idx, group: i, seq: set.length + 1 }]
+        ...cards.cardset.map((set, ci) =>
+          // 依 ri 陸續編列  [[],[],[],[],[],[],[],[],]
+          ri % 8 !== ci ? set : [...set, { ...cardset[next], cardId: next, springId: ri, group: ci, seq: set.length }]
         ),
       ];
       return cards;
@@ -37,12 +36,64 @@ export const newGame = () => {
 };
 
 export const initfrom = _ => ({ x: 400, y: 500, shadow: false, zIndex: '10' });
-export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 30, delay: i * 30 });
+export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 40, delay: i * 30 });
 
-export const getCardPosition = ({ group, seq }) => ({
-  x: group * 125,
-  y: (seq - 1) * 30,
-});
+export const getCardPosition = ({ group, seq }, cardWidth = 100, padding = 25) => {
+  const cardRange = cardWidth + padding;
+
+  if (group === 'cells' || group === 'foundation')
+    return {
+      x: seq * cardRange,
+      y: -178,
+    };
+
+  // cardset
+  return {
+    x: group * cardRange,
+    y: seq * 40,
+  };
+};
+
+export const getGroupRange = (groupId, cardWidth = 100, padding = 25) => {
+  const fixedPositionValue = -(padding / 2);
+  const cardRange = cardWidth + padding;
+  const initCardRange = fixedPositionValue + cardRange;
+
+  return groupId === 0
+    ? [0, initCardRange]
+    : [initCardRange + (groupId - 1) * cardRange, initCardRange + groupId * cardRange];
+};
+
+export const getMatchedGroup = (cardPosition, cardWidth = 100, padding = 25) => {
+  const [x, y] = cardPosition;
+  const maxWidth = (cardWidth + padding) * 8 - padding;
+
+  const totalMatched = enums(8, 0)
+    .filter(groupId => {
+      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId);
+
+      if (x < 0 && groupId === 0) return true;
+      if (x > maxWidth && groupId === 7) return true;
+      return [x, x + cardWidth].some(pos => groupRangeStart <= pos && pos <= groupRangeEnd);
+    })
+    .map(groupId => {
+      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId);
+      return {
+        groupId,
+        left: Math.min(x, groupRangeStart),
+        right: Math.max(x + cardWidth, groupRangeEnd),
+      };
+    })
+    .sort((m, m1) => m.right - m.left - (m1.right - m1.left));
+
+  if (y > 0) return totalMatched;
+
+  return totalMatched.map(t => ({
+    ...t,
+    groupId: t.groupId <= 4 ? 'cells' : 'foundation',
+    seq: t.groupId,
+  }));
+};
 
 // const card = event?.target ?? undefined;
 

@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { animated } from 'react-spring';
 import styled, { createGlobalStyle } from 'styled-components';
 
@@ -12,58 +11,65 @@ export const GlobalStyle = createGlobalStyle`
     font-family: 'Oleo Script', sans-serif;
     background-color: #162029;
     overflow: hidden;
-    margin: 0;
+    margin: 0;    
+  }
+
+  *{
+    box-sizing: border-box;
   }
 `;
 export const Container = styled.div`
   margin: 3rem auto;
-  width: 975px;
+  width: ${props => props.width || '975px'};
   user-select: none;
 `;
-export const FreeCardZone = styled.div`
-  width: 100px;
-  height: 154px;
+export const CardBase = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  width: ${props => props.width || '100px'};
+  height: ${props => props.height || '154px'};
+  position: relative;
+  user-select: none;
   border: 2px solid #ffac4e;
   border-radius: 10px;
   font-size: 2rem;
-  color: #545b61;
   font-weight: 700;
-  position: relative;
-  user-select: none;
+  color: #545b61;
 
   &::before {
     content: '';
-    border: 1px solid #c48743;
-    border-radius: 5px;
+    display: block;
     width: 90%;
     height: 95%;
-    display: block;
     position: absolute;
+    border: 1px solid #c48743;
+    border-radius: 5px;
+  }
+
+  &::after {
+    content: "${props => props.text}";
   }
 `;
 export const CardZone = styled.div`
-  position: relative;
   display: flex;
   justify-content: space-between;
+  position: relative;
   margin-bottom: 1.5rem;
   user-select: none;
 `;
 export const Card = styled(animated.div)`
-  position: absolute;
-  width: 100px;
-  height: 154px;
+  width: ${props => props.width || '100px'};
+  height: ${props => props.height || '154px'};
   background-size: cover;
+  position: absolute;
 `;
 export const HintArea = styled(animated.div)`
   position: absolute;
-  width: 100px;
-  height: 154px;
-  z-index: 999;
+  width: ${props => props.width || '100px'};
+  height: ${props => props.height || '154px'};
+  z-index: 130;
   box-shadow: 0 0 25px #ffac4e;
   border: 1px solid #ffac4e;
   border-radius: 10px;
-  box-sizing: border-box;
 `;
