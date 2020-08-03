@@ -69,7 +69,7 @@ export const HintArea = styled(animated.div)`
   width: ${props => props.width || '100px'};
   height: ${props => props.height || '154px'};
   z-index: 130;
-  box-shadow: 0 0 25px #ffac4e;
-  border: 1px solid #ffac4e;
+  box-shadow: 0 0 25px #ffb057;
+  border: 1px solid #ffb057;
   border-radius: 10px;
 `;

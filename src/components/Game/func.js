@@ -63,8 +63,7 @@ export const getGroupRange = (groupId, cardWidth = 100, padding = 25) => {
     : [initCardRange + (groupId - 1) * cardRange, initCardRange + groupId * cardRange];
 };
 
-export const getMatchedGroup = (cardPosition, cardWidth = 100, padding = 25) => {
-  const [x, y] = cardPosition;
+export const getMatchedGroup = ([x, y], cardWidth = 100, padding = 25) => {
   const maxWidth = (cardWidth + padding) * 8 - padding;
 
   const totalMatched = enums(8, 0)
