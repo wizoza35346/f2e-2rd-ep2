@@ -8,9 +8,7 @@ function App() {
   return (
     <>
       <GlobalStyle />
-      <Container>
-        <Game />
-      </Container>
+      <Game />
     </>
   );
 }

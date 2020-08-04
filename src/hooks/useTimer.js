@@ -5,22 +5,21 @@ function useTimer() {
   const p = useRef(0);
 
   const start = () => {
+    console.log(p.current);
     p.current = setInterval(() => {
       setTimer(prevTime => prevTime + 1);
     }, 1000);
   };
 
-  const pause = () => {
+  const pause = () => {};
+
+  const returnTo0 = () => {
+    console.log(p.current);
     clearInterval(p.current);
-  };
-
-  const reStart = () => {
-    pause();
     setTimer(0);
-    start();
   };
 
-  return { timer, start, pause, reStart };
+  return { timer, start, pause, returnTo0 };
 }
 
 export default useTimer;

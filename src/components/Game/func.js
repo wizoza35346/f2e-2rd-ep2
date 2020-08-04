@@ -1,4 +1,8 @@
+import { card as cardSize } from '../Styled';
 import { importAll, enums, shuffle } from '../../utils';
+
+let { width: cardWidth, padding } = cardSize;
+
 export const images = importAll(require.context('../../assets/cards/', false, /\.(png)$/));
 export const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
 export const nums = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -40,22 +44,27 @@ export const newGame = () => {
   );
 };
 
-export const initfrom = _ => ({ x: 400, y: 500, shadow: false, zIndex: '10' });
-export const initto = i => ({ x: (i % 8) * 125, y: Math.floor(i / 8) * 40, delay: i * 30 });
+export const initfrom = (_, magnifier = 1) => ({ x: 400, y: 500, shadow: false, zIndex: '10' });
+export const initto = (i, magnifier = 1) => ({
+  x: (i % 8) * (cardWidth + padding) * magnifier,
+  y: Math.floor(i / 8) * 30 * magnifier,
+  delay: i * 30,
+});
 
-export const getCardPosition = ({ type, group, seq }, cardWidth = 100, padding = 25) => {
-  const cardRange = cardWidth + padding;
+export const getCardPosition = ({ type, group, seq }, magnifier = 1) => {
+  const cardRange = (cardWidth + padding) * magnifier;
+  const cardCollectZone = -145.5;
   const fixedGroup = type === 'foundation' ? group + 4 : group;
 
   return {
     x: fixedGroup * cardRange,
-    y: type.match(/(cell|foundation)/) ? -178 : seq * 40,
+    y: (type.match(/(cell|foundation)/) ? cardCollectZone : seq * 30) * magnifier,
   };
 };
 
-export const getGroupRange = (groupId, cardWidth = 100, padding = 25) => {
-  const fixedPositionValue = -(padding / 2);
-  const cardRange = cardWidth + padding;
+export const getGroupRange = (groupId, magnifier = 1) => {
+  const fixedPositionValue = -(padding / 2) * magnifier;
+  const cardRange = (cardWidth + padding) * magnifier;
   const initCardRange = fixedPositionValue + cardRange;
 
   return groupId === 0
@@ -63,24 +72,25 @@ export const getGroupRange = (groupId, cardWidth = 100, padding = 25) => {
     : [initCardRange + (groupId - 1) * cardRange, initCardRange + groupId * cardRange];
 };
 
-export const getMatchedGroup = ([x, y], cardWidth = 100, padding = 25) => {
-  const maxWidth = (cardWidth + padding) * 8 - padding;
+export const getMatchedGroup = ([x, y], magnifier = 1) => {
+  const maxWidth = ((cardWidth + padding) * 8 - padding) * magnifier;
+  const fixedCardWidth = cardWidth * magnifier;
 
   const totalMatched = enums(8, 0)
     .filter(groupId => {
-      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId);
+      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId, magnifier);
 
       if (x < 0 && groupId === 0) return true;
       if (x > maxWidth && groupId === 7) return true;
-      return [x, x + cardWidth].some(pos => groupRangeStart <= pos && pos <= groupRangeEnd);
+      return [x, x + fixedCardWidth].some(pos => groupRangeStart <= pos && pos <= groupRangeEnd);
     })
     .map(groupId => {
-      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId);
+      const [groupRangeStart, groupRangeEnd] = getGroupRange(groupId, magnifier);
       return {
         type: 'cardset',
         group: groupId,
         left: Math.min(x, groupRangeStart),
-        right: Math.max(x + cardWidth, groupRangeEnd),
+        right: Math.max(x + fixedCardWidth, groupRangeEnd),
       };
     })
     .sort((m, m1) => m.right - m.left - (m1.right - m1.left));
@@ -94,4 +104,12 @@ export const getMatchedGroup = ([x, y], cardWidth = 100, padding = 25) => {
     type: t.group < 4 ? 'cells' : 'foundation',
     seq: 1,
   }));
+};
+
+export const getMagnifier = () => {
+  // if (window.innerWidth >= 1920) return 2;
+  if (window.innerWidth > 1200) return 1.2;
+  else if (window.innerWidth > 992) return 1;
+  else if (window.innerWidth > 768) return 0.8;
+  else return 0.6;
 };

@@ -1,17 +1,19 @@
 import { useResize } from '../../hooks/useResize';
 import { useRef, useEffect, useState } from 'react';
+import { getMagnifier } from './func';
 
 function useGameSize() {
-  const [cardPosition, setCardPosition] = useState({ x: '125px', y: '40px' });
+  const [magnifier, setMagnifier] = useState(getMagnifier);
+
   const cardZoneRef = useRef(null);
   const cardZoneOffsetRef = useRef(null);
 
   const handleResize = () => {
-    // TODO Update CardPosition
+    setMagnifier(getMagnifier());
 
     cardZoneOffsetRef.current = {
-      offsetTop: cardZoneRef.current?.offsetTop,
-      offsetLeft: cardZoneRef.current?.offsetLeft,
+      offsetTop: cardZoneRef.current?.offsetTop + cardZoneRef.current.offsetParent?.offsetTop,
+      offsetLeft: cardZoneRef.current?.offsetLeft + cardZoneRef.current.offsetParent?.offsetLeft,
     };
   };
 
@@ -21,7 +23,7 @@ function useGameSize() {
 
   useResize(handleResize);
 
-  return { cardPosition, cardZoneRef, cardZoneOffsetRef };
+  return { magnifier, cardZoneRef, cardZoneOffsetRef };
 }
 
 export default useGameSize;

@@ -8,8 +8,8 @@ import { enums } from '../../utils';
 import useTimer from '../../hooks/useTimer';
 
 export default function useGame() {
-  const { cardZoneRef, cardZoneOffsetRef } = useGameSize();
-  const { timer, start, pause, reStart: reTimer } = useTimer();
+  const { magnifier, cardZoneRef, cardZoneOffsetRef } = useGameSize();
+  const { timer, start: startTimer, pause: pauseTimer, returnTo0: reTimer } = useTimer();
 
   //* 卡片設定區
   const dragOffset = useRef([0, 0]);
@@ -55,7 +55,7 @@ export default function useGame() {
   );
   const getHintPosition = useCallback(
     ({ dragCards, dragPosition }) => {
-      const [{ type, group, seq }] = getMatchedGroup(dragPosition);
+      const [{ type, group, seq }] = getMatchedGroup(dragPosition, magnifier);
       const [firstDragCard] = dragCards;
       const groupset = cards.cardset[group];
 
@@ -63,7 +63,7 @@ export default function useGame() {
       let hintPosition = {};
       if (type === 'cardset') {
         const [hoverCard = { base: true, type: 'cardset', group, seq: 0 }] = groupset.slice(-1);
-        hintPosition = getCardPosition(hoverCard);
+        hintPosition = getCardPosition(hoverCard, magnifier);
         if (hoverCard.base) {
           isHint = true;
           // * 移到空白卡區 可移動長度-1
@@ -72,7 +72,7 @@ export default function useGame() {
       }
       // * cells | foundation 1次只能移動1張
       else if (dragCards.length === 1) {
-        hintPosition = getCardPosition({ type, group, seq });
+        hintPosition = getCardPosition({ type, group, seq }, magnifier);
 
         if (type === 'cells') isHint = isCellsEmpty({ type, group, seq });
         else isHint = isStackValid({ dragCard: firstDragCard, type, group, seq });
@@ -91,7 +91,7 @@ export default function useGame() {
           }
         : { toType: undefined, toGroup: undefined, spring: { display: 'none' } };
     },
-    [cards, dragLength, isCellsEmpty, isStackValid]
+    [cards, dragLength, isCellsEmpty, isStackValid, magnifier]
   );
   const handleMoveCards = useCallback(
     ({ type, group, seq }, { type: toType, group: toGroup, seq: toSeq }) => {
@@ -145,9 +145,7 @@ export default function useGame() {
     card => {
       if (!isValidBeforeDrag(card)) return;
 
-      console.log(card);
       const { type, group, seq, suit, number } = card;
-
       const groupset = cards[type][group];
       const controlCards = groupset.filter(g => g.seq >= seq);
 
@@ -235,7 +233,7 @@ export default function useGame() {
         if (matchedMoveCard)
           return {
             x: fixedX,
-            y: fixedY + (matchedMoveCard.seq - seq) * 40,
+            y: fixedY + (matchedMoveCard.seq - seq) * (30 * magnifier),
             zIndex: '131',
             immediate: down,
           };
@@ -263,7 +261,7 @@ export default function useGame() {
           const matchedCard = controlCards.find(c => c.springId === index);
 
           if (matchedCard) {
-            const { x: posX, y: posY } = getCardPosition(matchedCard);
+            const { x: posX, y: posY } = getCardPosition(matchedCard, magnifier);
             return { shadow: false, x: posX, y: posY, delay: 30 * (matchedCard.seq - seq), zIndex: '10' };
           }
         });
@@ -276,30 +274,34 @@ export default function useGame() {
     },
   });
 
-  const undo = useCallback(() => {
-    console.log(cardsRecRef.current);
-  }, []);
+  const undo = () => {
+    const [initState] = cardsRecRef.current;
+    const lastState = cardsRecRef.current.pop();
+    // console.log(JSON.parse(currentState), JSON.parse(lastState));
+    setCards(JSON.parse(lastState ? lastState : initState));
+  };
 
-  const play = useCallback(async () => {
+  const play = async () => {
     if (cardsRecRef.current.length !== 0) {
       cardsRecRef.current = [];
       setCards(newGame());
-      await setCardsProps(i => ({ ...initfrom(i) }));
+      await setCardsProps(i => ({ ...initfrom(i, magnifier) }));
     }
-    await setCardsProps(i => ({ ...initto(i), from: initfrom(i) }));
-    reTimer();
-  }, []);
+    await setCardsProps(i => ({ ...initto(i, magnifier), from: initfrom(i, magnifier) }));
+    startTimer();
+  };
 
   const reStart = async () => {
     const [originalGame] = cardsRecRef.current;
-    console.log(cardsRecRef.current);
 
     if (originalGame) {
+      reTimer();
       setCards(JSON.parse(originalGame));
       cardsRecRef.current = [];
 
       await setCardsProps(i => ({ ...initfrom(i) }));
       await setCardsProps(i => ({ ...initto(i), from: initfrom(i) }));
+      startTimer();
     }
   };
 
@@ -308,20 +310,22 @@ export default function useGame() {
   }, []);
 
   useEffect(() => {
+    console.log(cards, cardsRecRef.current);
     cardsRecRef.current.push(JSON.stringify(cards));
     if (cardsRecRef.current.length !== 1) {
       setCardsProps(index => {
         const card = flatCards.find(c => c.springId === index);
 
         if (card) {
-          const { x: posX, y: posY } = getCardPosition(card);
+          const { x: posX, y: posY } = getCardPosition(card, magnifier);
           return { shadow: false, x: posX, y: posY, zIndex: '10' };
         }
       });
     }
-  }, [cards, flatCards]);
+  }, [cards, flatCards, magnifier]);
 
   return {
+    magnifier,
     timer,
     cards,
     cardsRecRef,
