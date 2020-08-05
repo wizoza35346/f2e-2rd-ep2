@@ -12,9 +12,11 @@ export default function useGame() {
   const { timer, start: startTimer, pause: pauseTimer, returnTo0: reTimer } = useTimer();
 
   //* 卡片設定區
-  const dragOffset = useRef([0, 0]);
   const [cards, setCards] = useState(newGame);
+  const [moveCount, setMoveCount] = useState(-1);
+
   const cardsRecRef = useRef([]);
+  const dragOffset = useRef([0, 0]);
 
   const flatCards = useMemo(() => [...cards.cardset.flat(), ...cards.cells.flat(), ...cards.foundation.flat()], [
     cards,
@@ -138,8 +140,9 @@ export default function useGame() {
 
         return newState;
       });
+      setMoveCount(moveCount + 1);
     },
-    [cards]
+    [cards, moveCount]
   );
   const handleAutoMove = useCallback(
     card => {
@@ -194,7 +197,7 @@ export default function useGame() {
   );
 
   // * 設定動畫
-  const [cardsProps, setCardsProps] = useSprings(flatCards.length, i => ({ ...initfrom(i) }));
+  const [cardsProps, setCardsProps] = useSprings(flatCards.length, i => ({ ...initfrom(i, magnifier) }));
   const [hintProps, setHintProps] = useSprings(2, () => ({ display: 'none', x: 0, y: 0 }));
 
   // * 綁定手勢操作
@@ -274,20 +277,27 @@ export default function useGame() {
     },
   });
 
-  const undo = () => {
-    const [initState] = cardsRecRef.current;
+  const undo = useCallback(() => {
+    if (cardsRecRef.current.length === 1) return;
+
+    // remove currentState
+    cardsRecRef.current.pop();
     const lastState = cardsRecRef.current.pop();
-    // console.log(JSON.parse(currentState), JSON.parse(lastState));
-    setCards(JSON.parse(lastState ? lastState : initState));
-  };
+    setCards(JSON.parse(lastState));
+    setMoveCount(moveCount + 1);
+  }, [moveCount]);
 
   const play = async () => {
     if (cardsRecRef.current.length !== 0) {
-      cardsRecRef.current = [];
+      pauseTimer();
+      reTimer();
       setCards(newGame());
+      setMoveCount(-1);
+      cardsRecRef.current = [];
       await setCardsProps(i => ({ ...initfrom(i, magnifier) }));
     }
     await setCardsProps(i => ({ ...initto(i, magnifier), from: initfrom(i, magnifier) }));
+    setMoveCount(0);
     startTimer();
   };
 
@@ -295,12 +305,14 @@ export default function useGame() {
     const [originalGame] = cardsRecRef.current;
 
     if (originalGame) {
+      pauseTimer();
       reTimer();
       setCards(JSON.parse(originalGame));
+      setMoveCount(-1);
       cardsRecRef.current = [];
-
-      await setCardsProps(i => ({ ...initfrom(i) }));
-      await setCardsProps(i => ({ ...initto(i), from: initfrom(i) }));
+      await setCardsProps(i => ({ ...initfrom(i, magnifier) }));
+      await setCardsProps(i => ({ ...initto(i), from: initfrom(i, magnifier) }));
+      setMoveCount(0);
       startTimer();
     }
   };
@@ -309,25 +321,30 @@ export default function useGame() {
     play();
   }, []);
 
-  useEffect(() => {
-    console.log(cards, cardsRecRef.current);
-    cardsRecRef.current.push(JSON.stringify(cards));
-    if (cardsRecRef.current.length !== 1) {
-      setCardsProps(index => {
-        const card = flatCards.find(c => c.springId === index);
+  const fixedCardPosition = useCallback(() => {
+    setCardsProps(index => {
+      const card = flatCards.find(c => c.springId === index);
 
-        if (card) {
-          const { x: posX, y: posY } = getCardPosition(card, magnifier);
-          return { shadow: false, x: posX, y: posY, zIndex: '10' };
-        }
-      });
-    }
-  }, [cards, flatCards, magnifier]);
+      if (card) {
+        const { x: posX, y: posY } = getCardPosition(card, magnifier);
+        return { shadow: false, x: posX, y: posY, zIndex: '10' };
+      }
+    });
+  }, [flatCards, magnifier]);
+
+  useEffect(() => {
+    if (moveCount !== -1) fixedCardPosition();
+  }, [fixedCardPosition, moveCount]);
+
+  useEffect(() => {
+    cardsRecRef.current.push(JSON.stringify(cards));
+  }, [cards]);
 
   return {
     magnifier,
     timer,
     cards,
+    moveCount,
     cardsRecRef,
     cardZoneRef,
     cardsProps,

@@ -1,23 +1,28 @@
 import { useState, useRef } from 'react';
+import useInterval from '../hooks/useInterval';
 
 function useTimer() {
   const [timer, setTimer] = useState(0);
-  const p = useRef(0);
+  const [isRunning, setIsRunning] = useState(false);
 
   const start = () => {
-    console.log(p.current);
-    p.current = setInterval(() => {
-      setTimer(prevTime => prevTime + 1);
-    }, 1000);
+    setIsRunning(true);
   };
 
-  const pause = () => {};
+  const pause = () => {
+    setIsRunning(false);
+  };
 
   const returnTo0 = () => {
-    console.log(p.current);
-    clearInterval(p.current);
     setTimer(0);
   };
+
+  useInterval(
+    () => {
+      setTimer(timer + 1);
+    },
+    isRunning ? 1000 : null
+  );
 
   return { timer, start, pause, returnTo0 };
 }

@@ -1,7 +1,8 @@
-import { card as cardSize } from '../Styled';
+import { container, card as cardSize } from '../Styled';
 import { importAll, enums, shuffle } from '../../utils';
 
-let { width: cardWidth, padding } = cardSize;
+const { width: containerWidth, height: containerHeight } = container;
+const { width: cardWidth, padding } = cardSize;
 
 export const images = importAll(require.context('../../assets/cards/', false, /\.(png)$/));
 export const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
@@ -44,7 +45,12 @@ export const newGame = () => {
   );
 };
 
-export const initfrom = (_, magnifier = 1) => ({ x: 400, y: 500, shadow: false, zIndex: '10' });
+export const initfrom = (_, magnifier = 1) => ({
+  x: (containerWidth * magnifier) / 2 - cardWidth * magnifier * 1.5,
+  y: containerHeight / 2,
+  shadow: false,
+  zIndex: '10',
+});
 export const initto = (i, magnifier = 1) => ({
   x: (i % 8) * (cardWidth + padding) * magnifier,
   y: Math.floor(i / 8) * 30 * magnifier,

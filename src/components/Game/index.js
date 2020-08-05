@@ -10,6 +10,7 @@ function Game() {
     magnifier,
     timer,
     cards,
+    moveCount,
     cardsRecRef,
     cardZoneRef,
     cardsProps,
@@ -49,7 +50,7 @@ function Game() {
         />
       );
     });
-  }, [flatCards, magnifier]);
+  }, [flatCards, handleAutoMove, magnifier]);
 
   return (
     <Container magnifier={magnifier}>
@@ -64,9 +65,7 @@ function Game() {
         <img src={require('../../assets/icon/Back.svg')} />
       </Button>
       <Header magnifier={magnifier}>
-        <div style={{ flex: '0 1 50%', textAlign: 'right' }}>
-          {cardsRecRef.current.length === 0 ? 0 : cardsRecRef.current.length - 1}
-        </div>
+        <div style={{ flex: '0 1 50%', textAlign: 'right' }}>{Math.max(moveCount, 0)}</div>
         <img src={require('../../assets/icon/Diamond.svg')} style={{ height: '16px', margin: '0 .625rem' }} />
         <div style={{ flex: '0 1 50%' }}>
           {Math.floor(timer / 60)} : {timer % 60}
