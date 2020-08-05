@@ -7,12 +7,14 @@ const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const DEV_MODE = process.env.NODE_ENV !== 'production';
 const HASH = DEV_MODE ? '' : '.[contenthash]';
 const STYLE_LOADER = DEV_MODE ? 'style-loader' : MiniCssExtractPlugin.loader;
+const PUBLIC_PATH = DEV_MODE ? '/' : '/f2e-2rd-ep2/';
 
 module.exports = {
   entry: ['react-hot-loader/patch', './src/main.js'],
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: `static/js/[name]${HASH}.js`,
+    publicPath: PUBLIC_PATH,
   },
   module: {
     rules: [
@@ -67,6 +69,7 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
+      PUBLIC_PATH: PUBLIC_PATH,
     }),
     new MiniCssExtractPlugin({
       filename: `static/css/[name]${HASH}.css`,
